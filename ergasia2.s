@@ -1,4 +1,4 @@
-	.data
+.data
 	T:	.word 5,0,0,0,0,4
 		.word 0,2,0,0,0,2
 		.word 0,0,10,0,0,0
@@ -6,7 +6,7 @@
 		.word 0,0,0,0,3,0
 		.word 0,2,0,4,3,0
 	
-	elements:  .word 25
+	elements:  .word 36
 	zero:	   .word 0
 	
 str1:	.asciiz "Sub-matrix at position i = "
@@ -22,91 +22,86 @@ endl:	.asciiz "\n"
 	
 main:
 	
-	lw $t1, elements($t0)			#first element
-	lw $t2,zero($t0)				#row_count
-	lw $t3,zero($t0)				#col_count
-	lw $t4,zero($t0)				#counter
-	lw $t5,zero($t0)				
-	addi $t6,$t6,6					#dimension
+	lw $t1, elements($t0)			#noOfElements
+	li $t2,0						#row_count
+	li $t3,0						#col_count
+	li $t4,0						#counter
+	li $t5,6						#dimension
 	
-loop:			addi $t7,$t2,5
-				addi $t8,$t3,5
-				slt $t7,$t7,$t6
-				slt $t8,$t8,$t6
-				beq $t7, $t8,isDiagonal
 
-After_isDiagonal:
-After_print:	addi $t0,$t0,4		#offset+=4
-				addi $t3,$t3,1		#col_count+=1
-				addi $t4,$t4,1		#counter+=1
-				div $t4,$t6			#get modulo
-				mfhi $t7
-				bne $t7,$zero,tag1	#still in same row 
-				#j Print_endl				
-After_row:		addi $t2,$t2, 1		#row_count+=1
-		
-tag1:			bne $t6, $t3, tag2  #still in same column
-				lw $t3, zero($t5)	#col_count=0
-tag2:			bne $t1, $t4, loop	#while(counter<elements)
+loop:			beq $t4, $t1, Exit		#if counter==elements exit
+				j get5dim_matrix
+after_matrix:	addi $t3,$t3,1			#col_count+=1
+				addi $t4,$t4,1			#counter+=1
+				beq $t3,$t5, change_col_row # col_count==dimension
+after_change_col_row:
+				bne $t4, $t1, loop		#if counter!=elements go to loop			
 				j Exit
+
+change_col_row:	li, $t3, 0	
+				addi $t2,$t2,1			#row_count+=1
+			 	j after_change_col_row
+
+
+
 				
-Print_num:		move $a0,$t7		#ektupose ton ari8mo
+Print_num:		move $a0,$t0		#ektupose ton ari8mo
 				li	$v0,1
 				syscall
-				j After_print
+				j After_print5
 
 
 Print_endl:		li	$v0,4			#ektupose to endl
 				la	$a0,endl	
 				syscall		
-				j After_row
+				j after_endl5
 				
-Print_str:		li	$v0,4			#ektupose to str1
-				la	$a0,str1	
-				syscall		
-				
-				move $a0,$t2		#ektupose to i
-				li	$v0,1
-				syscall				
-				
-				li	$v0,4			#ektupose to str2
-				la	$a0,str2	
-				syscall
-				
-				move $a0,$t3		#ektupose to j
-				li	$v0,1
-				syscall	
-				
-				bne $t8,1,Exit
-				li	$v0,4			#ektupose to diag
-				la	$a0,diag	
-				syscall
-				
-				j Exit
-
-isDiagonal:		move $s0, $t2					#temp_counter=row_count
-				move $s1, $t3					#col_count_temp
-				li $t8,1						#flagDiag=1
-				#beq $t2, $t3, isDiagonal_row_eq_count
-				#j isDiagonal_row_noteq_count
-				
-return:			addi $t9, $t2, 5		#row_count+5
-				slt $t9,$s0,$t9
-				bne $t9,$zero,isDiagonal		#if temp_counter<row_count+5 -> not equal to zero -> isDiagonal
-				addi $t9, $t3, 5		#row_count+5
-				slt $t9,$s1,$t9
-				bne $t9,$zero,isDiagonal
-				beq $t8, 1, Print_str #checkfor_print
-				j After_isDiagonal
-				
-				
-isDiagonal_row_eq_count: 	beq $t7,$zero, set_flag_zero
-							j return		
-isDiagonal_row_noteq_count:	bne $t7,$zero, set_flag_zero
-							j return
-
-set_flag_zero:			li $t8,0
-						j return
 
 Exit:			li	$v0,10		#telos
 				syscall
+
+
+
+get5dim_matrix:	#check if matrix 5x5 can be computed
+				addi $t6, $t2, 5					#row_count+5
+				sle $t6, $t6, $t5					#result<6
+				bne $t6,1, after_matrix				#return
+
+				addi $t6, $t3, 5					#col_count+5
+				sle $t6, $t6, $t5					#result<6
+				bne $t6,1, after_matrix				#return
+
+				#must get 5x5 matrix
+				#$t6 = new row_count
+				#$t7 = new col_count
+				#$t9 = new counter
+
+				addi $t6, $t2,0
+				addi $t7, $t3,0
+				li $t9, 0				#new counter == 0  must be less than 25
+
+loop_matrix5x5:	mult $t6,$t5		#get and print element
+				mflo $t8
+				add $t8,$t8,$t7
+				li $t0,4
+				mult $t8,$t0
+				mflo $t8
+				lw $t0, T($t8)
+
+				j Print_num
+				
+After_print5:	addi $t7,$t7,1			#col_count+=1
+				addi $t9,$t9,1			#new counter+=1
+				addi $t8, $t3, 5					#col_count+5
+				beq $t7,$t8, change_col_row_5
+after_change_col_row_5:
+				bne $t9, 25, loop_matrix5x5		#if new counter!=25 go to loop			
+
+				j after_matrix			
+
+
+
+change_col_row_5:addi $t7, $t3,0		#initial column
+				addi $t6,$t6,1			#row_count+=1
+				j Print_endl
+after_endl5:	j	after_change_col_row_5					
